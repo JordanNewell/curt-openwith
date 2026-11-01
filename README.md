@@ -137,6 +137,25 @@ real `parseCurt` round-trip through node when both node and the reference
 `curt-format` package are available (skipped otherwise). Manual QA steps for
 a real mac and a real Linux desktop are in `QA-CHECKLIST.md`.
 
+### CI QA matrix
+
+`.github/workflows/qa.yml` runs both Unix installers on real operating
+systems (`macos-14`, `ubuntu-24.04`): syntax-gate every shell script, run
+`mac/install.sh` / `linux/install.sh`, assert the registration (`duti -x
+curt`, `plutil -lint`, `xdg-mime query filetype/default`,
+`desktop-file-validate`), exercise the open path against the committed
+fixture `tests/fixtures/ci-sample.curt` — a spec-valid v1 envelope whose
+message body smuggles `</script>` markup on purpose — and validate the
+generated HTML with `tests/ci-validate.js` (escape invariant, JSON round
+trip, offline-resource scan, real `parseCurt` through the vendored
+reference implementation). It then attempts the real Launch Services
+`open` / `xdg-open` paths (tolerated with `continue-on-error` — CI runners
+are headless), uninstalls with residue assertions, and reinstalls to prove
+idempotence. The Finder/DE eyeball lines of `QA-CHECKLIST.md` stay
+human-only; everything automatable runs in CI. The workflow fires on push
+(the repo has no remote yet — it starts running when the repo lands on
+GitHub).
+
 
 ## Shipping
 

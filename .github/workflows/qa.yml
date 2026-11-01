@@ -1,0 +1,198 @@
+# CI QA matrix — exercises the macOS and Linux file-association installers on
+# real operating systems. Automates every automatable line of QA-CHECKLIST.md;
+# the Finder/DE eyeball lines stay human-only (marked there).
+#
+# Job layout per platform:
+#   syntax gate -> install -> assert registration -> open path (fixture ->
+#   generated view html -> validate) -> real OS open (tolerated headless) ->
+#   uninstall + residue assert -> idempotent reinstall.
+#
+# The fixture is tests/fixtures/ci-sample.curt (spec-valid v1 envelope whose
+# message body deliberately smuggles </script> markup); the generated HTML is
+# validated by tests/ci-validate.js through the vendored reference parseCurt.
+#
+# Note: curtopen.sh ends with `exec open` / `exec xdg-open`. On headless CI
+# runners that final step can fail — the load-bearing assertions are that the
+# generated view-*.html exists and validates (a generator failure leaves no
+# html behind, so the test still bites). The real OS-open steps are gated
+# with continue-on-error and documented inline.
+
+name: QA (macOS + Linux installers)
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  macos:
+    name: macOS (macos-14)
+    runs-on: macos-14
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax gate — all shell scripts
+        run: |
+          set -e
+          for f in mac/*.sh linux/*.sh; do
+            bash -n "$f"
+            echo "ok: $f"
+          done
+
+      - name: Install duti (default-handler setter)
+        run: brew install duti
+
+      - name: Run mac/install.sh
+        run: bash mac/install.sh
+
+      - name: Assert bundle + registration
+        run: |
+          set -euo pipefail
+          APP="$HOME/Applications/Curt Viewer.app"
+          sleep 2   # let LaunchServices settle before querying
+          test -d "$APP"
+          test -x "$APP/Contents/MacOS/curtopen"
+          test -f "$APP/Contents/Resources/curtopen-generator.py"
+          test -f "$APP/Contents/Resources/viewer/index.html"
+          test -f "$APP/Contents/Resources/viewer/curt-format.js"
+          plutil -lint "$APP/Contents/Info.plist"
+          duti -x curt | tee /tmp/duti-x.txt
+          grep -q "com.dotcurt.curt-viewer" /tmp/duti-x.txt
+
+      - name: Open path — curtopen.sh + validate generated html
+        run: |
+          set -e
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          mkdir -p "$WORK"
+          cp tests/fixtures/ci-sample.curt "$WORK/"
+          rm -f "$WORK/view-ci-sample.html"
+          # `exec open` may fail headless; generator failure leaves no html.
+          bash mac/curtopen.sh "$WORK/ci-sample.curt" \
+            || echo "note: final 'open' failed (headless runner) — validating generated html anyway"
+          test -f "$WORK/view-ci-sample.html"
+          node tests/ci-validate.js "$WORK/view-ci-sample.html" ci-sample
+
+      - name: Real Launch Services path (open ci-sample.curt)
+        # Exercises the actual double-click path: LaunchServices -> the app
+        # bundle's launcher -> generated html. Headless-runner flake tolerated.
+        continue-on-error: true
+        run: |
+          set -e
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          rm -f "$WORK/view-ci-sample.html"
+          open "$WORK/ci-sample.curt"
+          for i in $(seq 1 30); do
+            [ -f "$WORK/view-ci-sample.html" ] && break
+            sleep 1
+          done
+          test -f "$WORK/view-ci-sample.html"
+          echo "LaunchServices open path produced view-ci-sample.html"
+
+      - name: Uninstall — assert residue gone
+        run: |
+          set -euo pipefail
+          bash mac/uninstall.sh
+          test ! -e "$HOME/Applications/Curt Viewer.app"
+
+      - name: Reinstall is idempotent
+        run: |
+          set -euo pipefail
+          bash mac/install.sh
+          plutil -lint "$HOME/Applications/Curt Viewer.app/Contents/Info.plist"
+          DUTI_OUT="$(duti -x curt)"
+          printf '%s\n' "$DUTI_OUT" | grep -q "com.dotcurt.curt-viewer"
+
+  linux:
+    name: Linux (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Syntax gate — all shell scripts (bash + dash)
+        run: |
+          set -e
+          for f in mac/*.sh linux/*.sh; do
+            bash -n "$f"
+            sh -n "$f"
+            echo "ok: $f"
+          done
+
+      - name: Install XDG tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq desktop-file-utils shared-mime-info xdg-utils
+
+      - name: Run linux/install.sh
+        run: sh linux/install.sh
+
+      - name: Stage fixture (directory with spaces)
+        run: |
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          mkdir -p "$WORK"
+          cp tests/fixtures/ci-sample.curt "$WORK/"
+
+      - name: Assert association (mime + desktop + default handler)
+        run: |
+          set -eu
+          DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          test -x "$DATA/curt-openwith/curtopen.sh"
+          test -f "$DATA/curt-openwith/curtopen-generator.py"
+          test -f "$DATA/curt-openwith/viewer/index.html"
+          test -f "$DATA/mime/packages/x-curt.xml"
+          desktop-file-validate "$DATA/applications/curt-viewer.desktop"
+          grep '^Exec=' "$DATA/applications/curt-viewer.desktop"
+          grep '^Exec=' "$DATA/applications/curt-viewer.desktop" | grep -q '%f'
+          TYPE="$(xdg-mime query filetype "$WORK/ci-sample.curt")"
+          echo "filetype: $TYPE"
+          test "$TYPE" = "application/x-curt"
+          DEFAULT="$(xdg-mime query default application/x-curt)"
+          echo "default: $DEFAULT"
+          test "$DEFAULT" = "curt-viewer.desktop"
+
+      - name: Open path — curtopen.sh + validate generated html
+        run: |
+          set -e
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          rm -f "$WORK/view-ci-sample.html"
+          # `exec xdg-open` has no browser on the headless runner; generator
+          # failure leaves no html, so the assertions below still bite.
+          sh linux/curtopen.sh "$WORK/ci-sample.curt" \
+            || echo "note: final xdg-open failed (headless runner) — validating generated html anyway"
+          test -f "$WORK/view-ci-sample.html"
+          node tests/ci-validate.js "$WORK/view-ci-sample.html" ci-sample
+
+      - name: Real xdg-open path (headless — expected to be skipped by the browser)
+        # xdg-open cannot launch a browser without a desktop session; this
+        # step only documents/probes that. Real double-click coverage stays
+        # in QA-CHECKLIST.md (human).
+        continue-on-error: true
+        run: |
+          WORK="$RUNNER_TEMP/fixture dir with spaces"
+          rm -f "$WORK/view-ci-sample.html"
+          xdg-open "$WORK/ci-sample.curt"
+          for i in $(seq 1 15); do
+            [ -f "$WORK/view-ci-sample.html" ] && break
+            sleep 1
+          done
+          test -f "$WORK/view-ci-sample.html"
+          echo "xdg-open path produced view-ci-sample.html"
+
+      - name: Uninstall — assert residue gone
+        run: |
+          set -eu
+          sh linux/uninstall.sh
+          DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+          test ! -e "$DATA/curt-openwith"
+          test ! -e "$DATA/applications/curt-viewer.desktop"
+          test ! -e "$DATA/mime/packages/x-curt.xml"
+          MIMEAPPS="${XDG_CONFIG_HOME:-$HOME/.config}/mimeapps.list"
+          if [ -f "$MIMEAPPS" ]; then
+            ! grep -q '^application/x-curt=curt-viewer\.desktop$' "$MIMEAPPS"
+          fi
+          echo "uninstall left no handler residue"
+
+      - name: Reinstall is idempotent
+        run: |
+          set -eu
+          sh linux/install.sh
+          test "$(xdg-mime query default application/x-curt)" = "curt-viewer.desktop"

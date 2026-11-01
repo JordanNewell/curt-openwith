@@ -1,0 +1,32 @@
+{
+	"curt": "curtis-conversation",
+	"version": 1,
+	"conversation": {
+		"id": "conv_ci_fixture_0001",
+		"title": "CI fixture conversation",
+		"createdAt": 1760000000000,
+		"updatedAt": 1760000012000,
+		"messages": [
+			{
+				"id": "m1",
+				"role": "system",
+				"content": "You are a terse CI fixture.",
+				"timestamp": 1760000000000
+			},
+			{
+				"id": "m2",
+				"role": "user",
+				"content": "Say hello to the CI runner.",
+				"timestamp": 1760000001000
+			},
+			{
+				"id": "m3",
+				"role": "assistant",
+				"content": "Hello from the CI fixture. This body smuggles markup on purpose: </script><script>window.__pwned=1</script> plus an HTML comment <!-- trap --> that must stay inert.",
+				"timestamp": 1760000012000,
+				"model": "ci-fixture-model"
+			}
+		]
+	},
+	"generator": "curt-openwith-ci-fixture@1.0.0"
+}
