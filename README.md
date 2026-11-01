@@ -140,9 +140,9 @@ a real mac and a real Linux desktop are in `QA-CHECKLIST.md`.
 ### CI QA matrix
 
 `.github/workflows/qa.yml` runs both Unix installers on real operating
-systems (`macos-14`, `ubuntu-24.04`): syntax-gate every shell script, run
+systems (`macos-15`, `ubuntu-24.04`): syntax-gate every shell script, run
 `mac/install.sh` / `linux/install.sh`, assert the registration (`duti -x
-curt`, `plutil -lint`, `xdg-mime query filetype/default`,
+curt`, `plutil -lint`, mime glob tables + `xdg-mime query default`,
 `desktop-file-validate`), exercise the open path against the committed
 fixture `tests/fixtures/ci-sample.curt` — a spec-valid v1 envelope whose
 message body smuggles `</script>` markup on purpose — and validate the

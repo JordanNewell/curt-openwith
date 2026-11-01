@@ -4,7 +4,7 @@ The generator itself is covered by automated tests (`python3
 shared/test-generator.py`, run on Windows during development). What cannot be
 tested on a Windows box is the OS association layer — that part now runs in
 CI: `.github/workflows/qa.yml` executes both installers on real runners
-(macos-14, ubuntu-24.04) — install, registration assertions, the open path
+(macos-15, ubuntu-24.04) — install, registration assertions, the open path
 against `tests/fixtures/ci-sample.curt` (validated by `tests/ci-validate.js`
 through the vendored reference `parseCurt`), uninstall residue, and
 idempotent reinstall. Items tagged **[CI]** are covered there; **[HUMAN]**
