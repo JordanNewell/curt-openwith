@@ -21,6 +21,7 @@
 import json
 import os
 import sys
+from typing import NoReturn
 
 # Injection anchor: the vendored bundle tag inside viewer/index.html. The
 # injected script must land right after it and before the module script
@@ -31,7 +32,7 @@ ANCHOR = '<script src="curt-format.js"></script>'
 OLD_TITLE = '<title>View .curt — open a conversation file in the browser</title>'
 
 
-def fail(msg):
+def fail(msg) -> NoReturn:
 	sys.stderr.write("Curt Viewer could not open this file:\n\n%s\n" % msg)
 	sys.exit(1)
 
