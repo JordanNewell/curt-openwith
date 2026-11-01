@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Curt Viewer
+GenericName=Conversation viewer
+Comment=View .curt conversation files offline in your browser
+Exec=@EXECPATH@ %f
+TryExec=python3
+MimeType=application/x-curt;
+Terminal=false
+NoDisplay=false
+Categories=Utility;Viewer;
+StartupNotify=false

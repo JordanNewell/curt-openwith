@@ -1,8 +1,8 @@
 # curt-openwith
 
-Double-click a `.curt` file on Windows and it opens in the offline Curt
-Viewer — a browser page that renders the conversation locally. No server, no
-network, no install beyond a couple of registry keys under your user account.
+Double-click a `.curt` file on Windows, macOS, or Linux and it opens in the
+offline Curt Viewer — a browser page that renders the conversation locally.
+No server, no network; installs only under your user account.
 
 ## Install / uninstall
 
@@ -19,10 +19,45 @@ network, no install beyond a couple of registry keys under your user account.
 
 Already-open Explorer windows may need a refresh (F5) to pick up the change.
 
+## macOS install / uninstall
+
+1. Extract this folder somewhere stable and run `mac/install.sh` from a
+   terminal. It builds `Curt Viewer.app` into `~/Applications`, registers it
+   with LaunchServices (`lsregister -f`), and — if the `duti` utility is
+   installed (`brew install duti`) — sets it as the default handler for
+   `.curt`. Without `duti`, the app still appears in Finder's Open With menu;
+   make it the default once by hand (Get Info → Open with → Curt Viewer →
+   Change All...).
+2. Double-click any `.curt` file.
+
+`mac/uninstall.sh` unregisters and deletes `~/Applications/Curt Viewer.app`.
+Current user only — no sudo, nothing outside your home directory. Requires
+python3 (macOS provides it via Command Line Tools: `xcode-select --install`).
+
+## Linux install / uninstall
+
+1. Extract this folder and run `linux/install.sh`. It installs a
+   self-contained copy to `~/.local/share/curt-openwith/`, plus
+   `curt-viewer.desktop` in `~/.local/share/applications/` and the
+   `application/x-curt` mime type (`x-curt.xml`, glob `*.curt`) in
+   `~/.local/share/mime/packages/`, then refreshes the mime and desktop
+   databases and runs `xdg-mime default curt-viewer.desktop application/x-curt`.
+2. Double-click a `.curt` file in your file manager, or `xdg-open file.curt`.
+
+`linux/uninstall.sh` removes all of it (including the default-handler line).
+Current user only — no sudo. Requires python3.
+
+Both platforms share one generator, `shared/curtopen-generator.py`
+(python3, stdlib only), and ship their own copy of the viewer; the installed
+artifact is self-contained, so the original extracted folder can be deleted
+after installing.
+
 ## How it works
 
 `curtopen.cmd` is the association target; it hands the file path to
-`curtopen.ps1`, which:
+`curtopen.ps1`. On macOS and Linux the association target is `Curt Viewer.app`
+/ `curt-viewer.desktop`, which invoke the shell wrappers (`mac/curtopen.sh`,
+`linux/curtopen.sh`) around the same logic. On every platform the generator:
 
 1. Reads the `.curt` file (BOM-aware: UTF-8, UTF-16LE/BE).
 2. Copies the bundled viewer (`viewer/index.html`, fully offline — styles and
@@ -94,6 +129,14 @@ the real `curtopen.ps1` generator over each in a temp directory
 parsing out the injected JSON, round-tripping it through `parseCurt`, and
 checking the `\u003c-escape` invariant. It never touches the registry and never
 launches a browser.
+
+macOS / Linux: `python3 shared/test-generator.py` does the same for the
+shared generator (`shared/curtopen-generator.py`) — the identical three
+fixtures, the same escape invariant, plus a UTF-16LE-BOM decode check and a
+real `parseCurt` round-trip through node when both node and the reference
+`curt-format` package are available (skipped otherwise). Manual QA steps for
+a real mac and a real Linux desktop are in `QA-CHECKLIST.md`.
+
 
 ## Shipping
 
