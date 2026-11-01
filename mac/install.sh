@@ -24,7 +24,9 @@ if ! command -v python3 >/dev/null 2>&1 && [ ! -x /usr/bin/python3 ]; then
 fi
 
 mkdir -p "$HOME/Applications"
-"$MACDIR/make-app.sh" "$HOME/Applications"
+# Invoke via bash, not directly: zip extraction on some platforms drops the
+# exec bit, and a non-executable make-app.sh would kill the whole install.
+bash "$MACDIR/make-app.sh" "$HOME/Applications"
 
 if [ ! -x "$LSREG" ]; then
 	echo "warning: lsregister not found at $LSREG — skipping LaunchServices registration." >&2
