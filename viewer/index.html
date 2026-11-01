@@ -1,0 +1,629 @@
+<!doctype html>
+<!--
+	curt-openwith offline viewer — a standalone copy of dot_curt/site/viewer/index.html
+	Upstream: https://github.com/JordanNewell/dot_curt (branch: viewer)
+	Synced at commit: 89b2659b14a4bcc26b9dbcae50290024fe6b1a50 (2026-11-01, viewer: story box below transcript)
+	Adjustments vs upstream, all tagged with a curt-openwith comment:
+	  1. stylesheet ../style.css -> style.css (copied next to this file, fonts included)
+	  2. module script honors window.__OPENED_FILE {name, text} injected at build
+	     time by curtopen.ps1, rendered through the same viewRaw() path as a dropped file
+	  3. site-only controls (nav, real-example fetch buttons, story box) removed —
+	     they need the dotcurt.org server or sibling pages this copy does not ship
+	Re-sync: copy upstream index.html back over this file, then re-apply the three
+	tagged edits (search for "curt-openwith"). See the package README.md.
+-->
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="color-scheme" content="light">
+	<title>View .curt — open a conversation file in the browser</title>
+	<meta property="og:image" content="https://dotcurt.org/og.png">
+	<meta property="og:image:width" content="1200">
+	<meta property="og:image:height" content="630">
+	<meta name="twitter:card" content="summary_large_image">
+	<meta name="twitter:image" content="https://dotcurt.org/og.png">
+
+	<meta name="description" content="A fully client-side viewer for the dot curt format: drop a .curt file, read the transcript, inspect the envelope. Nothing is uploaded.">
+	<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M8 16a4 4 0 0 1 4-4h13l6 6h21a4 4 0 0 1 4 4v30a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z' fill='%23F3ECD3' stroke='%23E0D6B4' stroke-width='2'/%3E%3Ccircle cx='32' cy='40' r='9' fill='%238A6A00'/%3E%3C/svg%3E">
+	<!-- curt-openwith: stylesheet vendored next to this file (fonts/ included), was ../style.css -->
+	<link rel="stylesheet" href="style.css">
+	<style>
+		/* Page-local rules. No new hex values: existing tokens only. */
+		.dropzone {
+			border: 1px dashed var(--ruling);
+			background: var(--surface);
+			border-radius: var(--radius-m);
+			padding: 2.75rem 1.5rem;
+			text-align: center;
+			font-family: var(--font-records);
+			max-width: 34rem;
+			cursor: pointer;
+		}
+		.dropzone:hover { border-color: var(--muted); }
+		.dropzone.drag { border-color: var(--ochre-700); background: var(--folder); }
+		.dropzone .d-big { font-size: 1.0625rem; margin: 0 0 0.5rem; color: var(--text); }
+		.dropzone .d-sub {
+			font-size: 0.8125rem;
+			color: var(--muted);
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			margin: 0;
+		}
+		.linklike {
+			background: none;
+			border: none;
+			padding: 0;
+			font: inherit;
+			color: var(--ochre-700);
+			text-decoration: underline;
+			text-underline-offset: 3px;
+			cursor: pointer;
+			text-align: left;
+			overflow-wrap: anywhere;
+		}
+		.linklike:hover { color: var(--ochre-900); }
+		.paste-box {
+			width: 100%;
+			min-height: 9rem;
+			font-family: var(--font-records);
+			font-size: 0.875rem;
+			line-height: 1.6;
+			color: var(--text);
+			background: var(--surface);
+			border: 1px solid var(--ruling);
+			border-radius: var(--radius-s);
+			padding: 0.875rem 1rem;
+			resize: vertical;
+		}
+		.paste-box:focus-visible { outline: 2px solid var(--ochre-700); outline-offset: 2px; }
+
+		/* the refusal: inline, always on the page, never console-only */
+		.error-box { border-color: var(--stamp); margin-top: 2rem; }
+		.error-box .why { color: var(--stamp); }
+
+		/* badges — the one shape every extra field takes */
+		.badges { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0.5rem 0 0; }
+		/* display:flex on .f-row would defeat [hidden]; re-state it */
+		.folder-body .f-row[hidden] { display: none; }
+		.badge {
+			display: inline-block;
+			font-family: var(--font-records);
+			font-size: 0.6875rem;
+			letter-spacing: 0.04em;
+			padding: 0.125rem 0.625rem;
+			border-radius: var(--radius-pill);
+			border: 1px solid var(--ruling);
+			color: var(--muted);
+			background: var(--surface);
+			max-width: 100%;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+		.badge b { color: var(--ochre-700); font-weight: 500; }
+
+		/* the transcript */
+		.transcript { max-width: 46rem; margin-top: 1.5rem; }
+		.msg {
+			border: 1px solid var(--ruling);
+			background: var(--surface);
+			border-radius: var(--radius-s);
+			padding: 1rem 1.25rem 1.125rem;
+			margin-bottom: 0.75rem;
+		}
+		.msg-system { background: var(--folder); }
+		.msg-tool { background: var(--bar); }
+		.m-role {
+			font-family: var(--font-records);
+			font-size: 0.6875rem;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			color: var(--ochre-700);
+			display: inline-block;
+			margin-right: 0.75rem;
+		}
+		.m-ts {
+			font-family: var(--font-records);
+			font-size: 0.6875rem;
+			letter-spacing: 0.04em;
+			color: var(--muted);
+		}
+		.m-text {
+			font-family: var(--font-display);
+			font-size: 0.9375rem;
+			margin: 0.5rem 0 0;
+			max-width: 46rem;
+			white-space: pre-wrap;
+			overflow-wrap: anywhere;
+		}
+		.msg .badges { margin-top: 0.625rem; }
+		@media (max-width: 40rem) {
+			.dropzone { padding: 2rem 1rem; }
+			.msg { padding: 0.875rem 1rem; }
+		}
+	</style>
+</head>
+<body>
+
+<header class="site-head">
+	<div class="wrap">
+		<a class="wordmark" href="../"><span class="dot">.</span>curt</a>
+		<nav class="site-nav" aria-label="the format">
+			<a href="../">the format</a>
+			<a href="../adopt/">adopt</a>
+			<a href="../listen/">listen</a>
+			<a href="../try/">try</a>
+			<a href="../viewer/" aria-current="page">viewer</a>
+			<a href="../paper/">paper</a>
+			<a href="https://github.com/JordanNewell/dot_curt">github</a>
+		</nav>
+	</div>
+</header>
+
+<main class="wrap">
+
+	<section class="section" style="margin-top: 3rem;">
+		<p class="kicker">Read in the browser — <b>nothing leaves this tab</b></p>
+		<h1>View the file.</h1>
+		<p class="lede">Drop a dot curt file on this page and read the conversation it holds — envelope, transcript, and extension fields, rendered exactly as the file wrote them. There is no server to upload to; the whole viewer is this page.</p>
+
+		<div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop a .curt file here, or press Enter to choose one">
+			<p class="d-big">Drop a .curt file here, or click to choose</p>
+			<p class="d-sub">one file · .curt or .json</p>
+		</div>
+		<input type="file" id="picker" accept=".curt,.json,application/json" hidden>
+
+		<div class="cta-row">
+			<button class="cta-quiet" id="sampleBtn" type="button">Load the sample file</button>
+			<span class="muted small">A conforming .curt v1 file, bundled with this page.</span>
+		</div>
+
+		<div class="cta-row">
+			<button class="cta-quiet" id="realBtn" type="button">Load a real conversation</button>
+			<span class="muted small">A 93-message session of real AI-assisted work — shared with permission, details scrubbed.</span>
+		</div>
+
+		<p class="muted small" style="margin-top: 1.25rem; max-width: 46rem;">
+			Validation runs through the reference implementation, vendored into this
+			page: a corrupted file is reported, never half-rendered. Content is read
+			as plain text and never interpreted — nothing in a viewed file can run.
+		</p>
+	</section>
+
+	<section class="section" id="paste-section">
+		<h2>No file handy? Paste it in.</h2>
+		<p class="muted">Paste the full JSON body of a .curt file — the same validation and rendering run on the paste, and nothing is uploaded anywhere.</p>
+		<div class="not-yet" style="max-width: 46rem;">
+			<span class="ny-label">Paste a .curt body</span>
+			<textarea class="paste-box" id="pasteBox" rows="8" placeholder='{"curt": "curtis-conversation", "version": 1, "conversation": {...}}' aria-label="Paste a .curt body"></textarea>
+			<div class="cta-row" style="margin: 1rem 0 0;">
+				<button class="cta-quiet" id="pasteBtn" type="button">View the paste</button>
+				<span class="muted small" id="pasteNote" role="status"></span>
+			</div>
+		</div>
+	</section>
+
+	<section class="section" id="errorBox" role="alert" hidden>
+		<div class="not-yet error-box">
+			<span class="ny-label">Could not read this file</span>
+			<p class="why" id="errorMsg">—</p>
+			<p class="muted small">A conforming .curt v1 file has the magic string <code>"curtis-conversation"</code>, <code>version: 1</code>, and a conversation whose every message carries <code>id</code>, <code>role</code>, <code>content</code>, and <code>timestamp</code>.</p>
+		</div>
+	</section>
+
+	<section class="section" id="result" hidden>
+		<p class="label">The conversation</p>
+		<div class="folder">
+			<span class="folder-tab" id="envTab">envelope</span>
+			<div class="folder-body" aria-live="polite">
+				<div class="f-row"><span class="k">title</span><span class="v" id="envTitle">—</span></div>
+				<div class="f-row"><span class="k">id</span><span class="v" id="envId">—</span></div>
+				<div class="f-row"><span class="k">created</span><span class="v" id="envCreated">—</span></div>
+				<div class="f-row"><span class="k">updated</span><span class="v" id="envUpdated">—</span></div>
+				<div class="f-row"><span class="k">messages</span><span class="v f-ok" id="envCount">—</span></div>
+				<div class="f-row" id="envGenRow" hidden><span class="k">generator</span><span class="v" id="envGen">—</span></div>
+				<div class="f-row" id="envExtRow" hidden><span class="k">extensions</span><span class="v badges" id="envExt"></span></div>
+				<div class="f-row" id="envExtraRow" hidden><span class="k">extras</span><span class="v badges" id="envExtra"></span></div>
+			</div>
+		</div>
+		<p class="muted small" style="max-width: 46rem;">
+			Envelope extras beyond the spec fields above are not shown — the
+			reference parser returns the conversation, and the viewer only reports
+			what the parser hands it. Extra fields on the conversation and its
+			messages <em>are</em> shown, as the badges below each turn.
+		</p>
+		<div class="transcript" id="transcript" aria-label="Transcript"></div>
+
+		<div class="not-yet" id="storyBox" style="margin-top: 1.5rem; max-width: 46rem;">
+			<span class="ny-label">The story behind that conversation</span>
+			<p class="muted small" style="margin: 0.5rem 0 0.75rem;">
+				This session is real work, unscripted. It became a blog post and a
+				podcast episode — and the episode itself ships as a .curt file.
+			</p>
+			<div class="cta-row" style="margin: 0;">
+				<a class="cta-quiet" href="https://jordannewell.com/posts/xbox360-not-dead/" target="_blank" rel="noopener">Read the blog post</a>
+				<a class="cta-quiet" href="https://audio.jordannewell.com/episodes/xbox360-not-dead.mp3" target="_blank" rel="noopener">Listen to the episode</a>
+				<button class="cta-quiet" id="episodeBtn" type="button">Read the episode as .curt</button>
+			</div>
+		</div>
+	</section>
+
+</main>
+
+<footer class="site-foot">
+	<div class="wrap">
+		<span><span class="dot" style="font-family: var(--font-records);">.</span>curt — the conversation format · MIT · v1</span>
+		<span>
+			<a href="https://github.com/JordanNewell/dot_curt/blob/main/SPEC.md">spec</a>
+			· <a href="https://github.com/JordanNewell/dot_curt/blob/main/EXTENSIONS.md">registry</a>
+			· <a href="https://www.npmjs.com/package/curt-format">npm</a>
+			· <a href="https://github.com/JordanNewell/dot_curt">github</a>
+			· born in <a href="https://github.com/JordanNewell/curtis-ai-chat">Curtis AI Chat</a>
+			· <a href="https://www.curtisai.tech/curt/">curtisai.tech/curt</a>
+		</span>
+	</div>
+</footer>
+
+<!-- The sample file, inline so the page works from file:// with no fetch.
+     Read as text and run through the same parse path as a dropped file. -->
+<script type="application/json" id="sampleCurt">{
+	"curt": "curtis-conversation",
+	"version": 1,
+	"conversation": {
+		"id": "conv_sample_0001",
+		"title": "The sample conversation",
+		"createdAt": 1760000000000,
+		"updatedAt": 1760000125000,
+		"messages": [
+			{
+				"id": "m1",
+				"role": "system",
+				"content": "You are a helpful assistant. Answer plainly.",
+				"timestamp": 1760000000000
+			},
+			{
+				"id": "m2",
+				"role": "user",
+				"content": "What is the .curt format, in one sentence?\n\nAnd does it need a server?",
+				"timestamp": 1760000001000
+			},
+			{
+				"id": "m3",
+				"role": "assistant",
+				"content": "One file, one conversation: .curt is a single JSON file that holds a whole chat — envelope, conversation, messages — so any app can read it without a database.\n\nAnd no: readers parse the file wherever it lives. This viewer runs entirely in your browser.",
+				"timestamp": 1760000009000,
+				"model": "sample-model-1",
+				"usage": {
+					"input_tokens": 14,
+					"output_tokens": 41
+				}
+			},
+			{
+				"id": "m4",
+				"role": "user",
+				"content": "Show me what an extension field looks like.",
+				"timestamp": 1760000060000
+			},
+			{
+				"id": "m5",
+				"role": "assistant",
+				"content": "Writers attach extra fields anywhere. This message carries an images-inline attachment; readers that ignore it still see the plain text below.",
+				"timestamp": 1760000068000,
+				"model": "sample-model-1",
+				"attachments": [
+					{
+						"name": "diagram.png",
+						"mime": "image/png",
+						"bytes": 20480
+					}
+				]
+			},
+			{
+				"id": "m6",
+				"role": "tool",
+				"content": "{\"ok\":true,\"query\":\"curt spec v1\"}",
+				"timestamp": 1760000120000,
+				"tool_name": "spec-lookup"
+			},
+			{
+				"id": "m7",
+				"role": "assistant",
+				"content": "That lookup confirms the file you are reading conforms: same magic string, version 1, every required field present.",
+				"timestamp": 1760000125000,
+				"model": "sample-model-1"
+			}
+		]
+	},
+	"generator": "viewer-sample@1.0.0",
+	"extensions": [
+		"images-inline",
+		"usage-metadata"
+	]
+}</script>
+
+<!-- Vendored, file:// safe. Same bundle the try page uses: dist/index.js with
+     the export keywords swapped for a window.curtFormat trailer. -->
+<script src="curt-format.js"></script>
+
+<script type="module">
+const { parseCurt, CURT_MAGIC } = window.curtFormat;
+
+const $ = (id) => document.getElementById(id);
+const KNOWN_MESSAGE_FIELDS = new Set(["id", "role", "content", "timestamp", "model"]);
+const KNOWN_CONVERSATION_FIELDS = new Set(["id", "title", "createdAt", "updatedAt", "messages"]);
+
+/* ---------- rendering: every value goes in via textContent, never markup.
+   A .curt file is untrusted input; nothing it contains can become HTML. ---------- */
+
+function fmtTs(ms) {
+	return Number.isFinite(ms) ? `${new Date(ms).toISOString().replace("T", " ").slice(0, 16)} UTC` : "no timestamp";
+}
+
+const EXTRA_MAX_CHARS = 160;
+function extraText(value) {
+	let text;
+	try {
+		text = typeof value === "string" ? value : JSON.stringify(value) ?? String(value);
+	} catch {
+		text = String(value);
+	}
+	return text.length > EXTRA_MAX_CHARS ? `${text.slice(0, EXTRA_MAX_CHARS)} …` : text;
+}
+
+function addBadge(container, key, value) {
+	const badge = document.createElement("span");
+	badge.className = "badge";
+	const k = document.createElement("b");
+	k.textContent = `${key}: `;
+	badge.appendChild(k);
+	badge.appendChild(document.createTextNode(extraText(value)));
+	container.appendChild(badge);
+}
+
+function renderExtraBadges(container, obj, known) {
+	for (const key of Object.keys(obj)) {
+		if (!known.has(key)) addBadge(container, key, obj[key]);
+	}
+}
+
+function showError(message) {
+	$("result").hidden = true;
+	$("errorMsg").textContent = message;
+	$("errorBox").hidden = false;
+	$("errorBox").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+}
+
+function clearError() {
+	$("errorBox").hidden = true;
+}
+
+function renderConversation(conversation, envelope) {
+	clearError();
+	const result = $("result");
+	result.hidden = false;
+
+	$("envTab").textContent = conversation.title || "untitled";
+	$("envTitle").textContent = conversation.title || "untitled";
+	$("envId").textContent = conversation.id;
+	$("envCreated").textContent = fmtTs(conversation.createdAt);
+	$("envUpdated").textContent = fmtTs(conversation.updatedAt);
+	$("envCount").textContent = `${conversation.messages.length} message${conversation.messages.length === 1 ? "" : "s"}`;
+
+	// Envelope fields: the parser returns only the conversation, so the
+	// optional spec fields (generator, extensions) are read from a plain
+	// JSON.parse of the same body — shown, never validated on. Any other
+	// envelope-level extras stay unreported; say so rather than guess.
+	$("envGenRow").hidden = !(typeof envelope?.generator === "string" && envelope.generator);
+	$("envGen").textContent = envelope?.generator ?? "";
+	const extensions = envelope?.extensions;
+	const extList = Array.isArray(extensions) ? extensions : null;
+	$("envExtRow").hidden = !extList;
+	if (extList) {
+		const el = $("envExt");
+		el.textContent = "";
+		for (const name of extList) addBadge(el, "extension", String(name));
+	}
+	const convExtras = Object.keys(conversation).filter((k) => !KNOWN_CONVERSATION_FIELDS.has(k));
+	$("envExtraRow").hidden = convExtras.length === 0;
+	if (convExtras.length > 0) {
+		const el = $("envExtra");
+		el.textContent = "";
+		renderExtraBadges(el, conversation, KNOWN_CONVERSATION_FIELDS);
+	}
+
+	const transcript = $("transcript");
+	transcript.textContent = "";
+	for (const m of conversation.messages) {
+		const card = document.createElement("div");
+		card.className = `msg msg-${m.role}`;
+
+		const role = document.createElement("span");
+		role.className = "m-role";
+		role.textContent = m.role;
+		const ts = document.createElement("span");
+		ts.className = "m-ts";
+		ts.textContent = fmtTs(m.timestamp);
+		card.append(role, ts);
+
+		const text = document.createElement("p");
+		text.className = "m-text";
+		text.textContent = m.content;
+		card.appendChild(text);
+
+		const extras = document.createElement("div");
+		extras.className = "badges";
+		if (m.model) addBadge(extras, "model", m.model);
+		renderExtraBadges(extras, m, KNOWN_MESSAGE_FIELDS);
+		if (extras.childNodes.length > 0) card.appendChild(extras);
+
+		transcript.appendChild(card);
+	}
+
+	// Machine-readable handle for this page's own checks.
+	window.__curtViewer = { conversation, envelope: envelope ?? null };
+}
+
+/* ---------- reading: diagnose honestly, validate through the reference parser ---------- */
+
+// Mirrors parseCurt's own gates so the failure reason matches the rejection:
+// bad JSON, missing magic, wrong version, or a conversation that fails
+// isCurtConversation. parseCurt stays the single validator; this only names
+// the gate that closed.
+function diagnose(raw) {
+	let data;
+	try {
+		data = JSON.parse(raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw);
+	} catch {
+		return "The body is not valid JSON — nothing to open.";
+	}
+	if (!data || typeof data !== "object" || Array.isArray(data)) {
+		return "The body is valid JSON, but not an object — a .curt file is one JSON object.";
+	}
+	if (data.curt !== CURT_MAGIC) {
+		return `The magic field is missing or wrong — expected "curt": "${CURT_MAGIC}" at the top of the envelope.`;
+	}
+	if (data.version !== 1) {
+		return `The envelope declares version ${JSON.stringify(data.version ?? null)} — this viewer reads version 1 files.`;
+	}
+	if (!parseCurt(raw)) {
+		return "The envelope is a .curt v1 header, but the conversation failed validation — every message needs a string id, one of the four roles, string content, and a numeric timestamp.";
+	}
+	return null;
+}
+
+function viewRaw(name, raw) {
+	const trimmed = raw.trim();
+	if (!trimmed) {
+		showError(`${name} is empty — nothing to open.`);
+		return;
+	}
+	const problem = diagnose(trimmed);
+	if (problem) {
+		showError(`${name}: ${problem}`);
+		return;
+	}
+	let envelope = null;
+	try {
+		envelope = JSON.parse(trimmed.charCodeAt(0) === 0xfeff ? trimmed.slice(1) : trimmed);
+	} catch { /* parseCurt already accepted the body; the envelope read is best-effort display only. */ }
+	renderConversation(parseCurt(trimmed), envelope);
+}
+
+function decodeText(bytes) {
+	if (bytes.length >= 2 && bytes[0] === 255 && bytes[1] === 254) return new TextDecoder("utf-16le").decode(bytes);
+	if (bytes.length >= 2 && bytes[0] === 254 && bytes[1] === 255) return new TextDecoder("utf-16be").decode(bytes);
+	return new TextDecoder().decode(bytes);
+}
+
+/* ---------- wiring ---------- */
+
+const zone = $("dropzone");
+const picker = $("picker");
+
+function ingestFiles(fileList) {
+	const files = Array.from(fileList || []);
+	if (files.length === 0) return;
+	if (files.length > 1) {
+		showError("One file at a time — drop a single .curt file.");
+		return;
+	}
+	const f = files[0];
+	f.arrayBuffer()
+		.then((buf) => viewRaw(f.name, decodeText(new Uint8Array(buf))))
+		.catch(() => showError(`${f.name} could not be read from disk.`));
+}
+
+zone.addEventListener("click", () => picker.click());
+zone.addEventListener("keydown", (e) => {
+	if (e.key === "Enter" || e.key === " ") {
+		e.preventDefault();
+		picker.click();
+	}
+});
+for (const type of ["dragenter", "dragover"]) {
+	zone.addEventListener(type, (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		zone.classList.add("drag");
+	});
+}
+for (const type of ["dragleave", "drop"]) {
+	zone.addEventListener(type, (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		zone.classList.remove("drag");
+	});
+}
+zone.addEventListener("drop", (e) => {
+	const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+	ingestFiles(files);
+});
+picker.addEventListener("change", () => {
+	ingestFiles(picker.files);
+	picker.value = "";
+});
+// Keep stray drops from navigating the page away.
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("drop", (e) => e.preventDefault());
+
+$("sampleBtn").addEventListener("click", () => {
+	viewRaw("sample.curt", $("sampleCurt").textContent);
+});
+
+$("realBtn").addEventListener("click", async () => {
+	try {
+		const res = await fetch("real-example.curt");
+		if (!res.ok) throw new Error("HTTP " + res.status);
+		viewRaw("real-example.curt", await res.text());
+	} catch (err) {
+		$("errorBox").hidden = false;
+		$("errorMsg").textContent = "Could not load the example file (" + err.message + "). Drop a .curt file on the page instead.";
+		$("errorBox").scrollIntoView({ block: "center" });
+	}
+});
+
+$("episodeBtn").addEventListener("click", async () => {
+	try {
+		const res = await fetch("episode.curt");
+		if (!res.ok) throw new Error("HTTP " + res.status);
+		viewRaw("episode.curt", await res.text());
+	} catch (err) {
+		$("errorBox").hidden = false;
+		$("errorMsg").textContent = "Could not load the episode transcript (" + err.message + "). Drop a .curt file on the page instead.";
+		$("errorBox").scrollIntoView({ block: "center" });
+	}
+});
+
+$("pasteBtn").addEventListener("click", () => {
+	const text = $("pasteBox").value.trim();
+	if (!text) {
+		$("pasteNote").textContent = "Nothing pasted yet.";
+		return;
+	}
+	$("pasteNote").textContent = "";
+	viewRaw("pasted body", text);
+});
+
+	/* curt-openwith: a generated copy of this page may carry a file injected at
+	   build time (curtopen.ps1 writes window.__OPENED_FILE = {name, text}).
+	   It takes the exact same validate-then-render path as a dropped file, so a
+	   bad body lands in the same clean error box — nothing here trusts the
+	   injected text more than a file the user dropped. */
+	if (window.__OPENED_FILE && typeof window.__OPENED_FILE.text === "string") {
+		viewRaw(window.__OPENED_FILE.name || "opened.curt", window.__OPENED_FILE.text);
+	}
+</script>
+
+
+<!-- curt-openwith: drop site-only controls. The nav links point at sibling pages
+     this copy does not ship; the real-example and episode buttons fetch() their
+     files, which browsers block on file:// anyway. -->
+<script>
+document.querySelector(".site-nav")?.remove();
+document.getElementById("realBtn")?.closest(".cta-row")?.remove();
+document.getElementById("storyBox")?.remove();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,470 @@
+		/*
+		  The Filing Room — dotcurt.org.
+		  Kin to the Curtis Records Office (curtisai.tech): warm paper, ruled
+		  hairlines, mono labels, one stamp, no shadows, no gradients.
+		  This room is manila and ochre, and its punctuation is the leading dot.
+		  No hex outside this token block.
+		*/
+		:root {
+			--paper: #FAF6E9;
+			--surface: #FFFDF2;
+			--folder: #F3ECD3;
+			--folder-deep: #EBE1BE;
+			--ruling: #E0D6B4;
+			--text: #221F12;
+			--muted: #6F6A52;
+			--bar: #F4EED8;
+			--ochre-700: #8A6A00;
+			--ochre-900: #63500A;
+			--ochre-500: #A58414;
+			--stamp: #B4532A;
+			--ink-canvas: #1C1910;
+			--ink-border: #39351D;
+			--ink-text: #F3EDD8;
+			--ink-muted: #A29B7D;
+			--ink-dim: #7E7860;
+			--gold: #D9AE3A;
+			--font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+			--font-records: 'Spline Sans Mono', ui-monospace, 'Cascadia Mono', monospace;
+			--radius-s: 4px;
+			--radius-m: 8px;
+			--radius-pill: 9999px;
+			--measure: 66ch;
+		}
+
+		/* Self-hosted, latin subsets, variable weights. No third-party requests. */
+		@font-face {
+			font-family: 'Newsreader';
+			font-style: normal;
+			font-weight: 400 700;
+			font-display: swap;
+			src: url('fonts/newsreader-roman.woff2') format('woff2');
+			unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		@font-face {
+			font-family: 'Newsreader';
+			font-style: italic;
+			font-weight: 400 700;
+			font-display: swap;
+			src: url('fonts/newsreader-italic.woff2') format('woff2');
+			unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+		@font-face {
+			font-family: 'Spline Sans Mono';
+			font-style: normal;
+			font-weight: 400 600;
+			font-display: swap;
+			src: url('fonts/spline-mono.woff2') format('woff2');
+			unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+		}
+
+		* { box-sizing: border-box; }
+
+		html { background: var(--paper); -webkit-text-size-adjust: 100%; }
+
+		body {
+			margin: 0;
+			background: var(--paper);
+			color: var(--text);
+			font-family: var(--font-display);
+			font-size: 1.0625rem;
+			line-height: 1.6;
+			font-optical-sizing: auto;
+		}
+
+		a { color: var(--ochre-700); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+		a:hover { color: var(--ochre-900); }
+
+		::selection { background: var(--folder); color: var(--ochre-900); }
+
+		:focus-visible { outline: 2px solid var(--ochre-700); outline-offset: 2px; }
+
+		::-webkit-scrollbar { width: 12px; height: 12px; }
+		::-webkit-scrollbar-track { background: var(--paper); border-left: 1px solid var(--ruling); }
+		::-webkit-scrollbar-thumb { background: var(--text); border: 3px solid var(--paper); border-radius: var(--radius-pill); }
+		::-webkit-scrollbar-thumb:hover { background: var(--ochre-700); }
+
+		.wrap { max-width: 64rem; margin: 0 auto; padding: 0 1.5rem; }
+
+		main { padding: 3rem 0 4rem; }
+
+		.section { margin-top: 4.5rem; }
+
+		h1, h2, h3 {
+			font-family: var(--font-display);
+			font-weight: 600;
+			line-height: 1.12;
+			letter-spacing: -0.01em;
+			margin: 0 0 1rem;
+			text-wrap: balance;
+		}
+		h1 { font-size: clamp(2.5rem, 6vw, 3.9rem); }
+		h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); }
+
+		p { max-width: var(--measure); margin: 0 0 1.25rem; }
+
+		.lede { font-size: 1.3rem; max-width: 30em; line-height: 1.5; }
+		.lede em { font-style: italic; }
+
+		.muted { color: var(--muted); }
+		.small { font-size: 0.875rem; }
+
+		/* the leading dot — the format's own punctuation, one per line */
+		.dot { color: var(--ochre-700); }
+
+		code { font-family: var(--font-records); font-size: 0.9em; }
+
+		.label {
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--muted);
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			margin: 0 0 1.25rem;
+		}
+
+		pre {
+			font-family: var(--font-records);
+			font-size: 0.9375rem;
+			line-height: 1.65;
+			background: var(--surface);
+			border: 1px solid var(--ruling);
+			border-radius: var(--radius-s);
+			padding: 1.25rem 1.5rem;
+			max-width: 44rem;
+			overflow-x: auto;
+			tab-size: 4;
+		}
+		pre code { font-size: inherit; }
+
+		.k { color: var(--muted); }
+		.s { color: var(--ochre-700); }
+		.n { color: var(--ochre-500); }
+		.c { color: var(--muted); font-style: italic; }
+
+		pre.dark {
+			background: var(--ink-canvas);
+			border-color: var(--ink-border);
+			color: var(--ink-text);
+		}
+		pre.dark .k { color: var(--ink-muted); }
+		pre.dark .s { color: var(--gold); }
+		pre.dark .n { color: var(--gold); }
+		pre.dark .c { color: var(--ink-dim); }
+
+		/* ---- header / footer ---- */
+
+		.site-head { border-bottom: 1px solid var(--ruling); padding: 1rem 0; }
+		.site-head .wrap {
+			display: flex;
+			align-items: baseline;
+			justify-content: space-between;
+			gap: 1.5rem;
+		}
+
+		.wordmark {
+			font-family: var(--font-records);
+			font-weight: 600;
+			font-size: 1.25rem;
+			letter-spacing: -0.02em;
+			color: var(--text);
+			text-decoration: none;
+		}
+		.wordmark:hover { color: var(--text); }
+		.wordmark .dot { color: var(--ochre-700); }
+
+		.site-nav { font-family: var(--font-records); font-size: 0.875rem; }
+		.site-nav a { color: var(--text); text-decoration: none; margin-left: 1.125rem; }
+		.site-nav a:hover { color: var(--ochre-700); }
+
+		.site-foot { border-top: 1px solid var(--ruling); padding: 2rem 0 3rem; color: var(--muted); font-size: 0.875rem; }
+		.site-foot .wrap {
+			display: flex;
+			justify-content: space-between;
+			align-items: baseline;
+			gap: 1.5rem;
+			flex-wrap: wrap;
+		}
+		.site-foot a { color: var(--muted); }
+		.site-foot a:hover { color: var(--text); }
+
+		/* ---- hero ---- */
+
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+			gap: 3rem;
+			align-items: start;
+			padding-top: 2rem;
+		}
+
+		.kicker {
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--muted);
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			margin: 0 0 1.5rem;
+		}
+		.kicker b { color: var(--ochre-700); font-weight: 500; }
+
+		.hero h1 { margin-bottom: 1.5rem; }
+
+		.cta-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin: 2rem 0 1.25rem; }
+
+		.cta {
+			display: inline-block;
+			background: var(--ochre-700);
+			color: var(--surface);
+			font-family: var(--font-records);
+			font-weight: 500;
+			font-size: 0.9375rem;
+			letter-spacing: 0.02em;
+			text-decoration: none;
+			padding: 0.75rem 1.5rem;
+			border-radius: var(--radius-pill);
+		}
+		.cta:hover { background: var(--ochre-900); color: var(--surface); }
+
+		.cta-quiet {
+			display: inline-block;
+			border: 1px solid var(--ruling);
+			color: var(--text);
+			font-family: var(--font-records);
+			font-size: 0.9375rem;
+			text-decoration: none;
+			padding: 0.75rem 1.5rem;
+			border-radius: var(--radius-pill);
+		}
+		.cta-quiet:hover { border-color: var(--muted); color: var(--text); }
+
+		.install {
+			display: inline-flex;
+			align-items: center;
+			gap: 1rem;
+			background: var(--surface);
+			border: 1px solid var(--ruling);
+			border-radius: var(--radius-s);
+			padding: 0.625rem 0.75rem 0.625rem 1.25rem;
+			font-family: var(--font-records);
+			font-size: 0.9375rem;
+		}
+		.install .ps { color: var(--muted); }
+		.install button {
+			background: none;
+			border: 1px solid var(--ruling);
+			border-radius: var(--radius-s);
+			color: var(--muted);
+			font-family: var(--font-records);
+			font-size: 0.75rem;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			padding: 0.25rem 0.75rem;
+			cursor: pointer;
+		}
+		.install button:hover { color: var(--ochre-700); border-color: var(--ochre-700); }
+
+		/* ---- the folder: this site's signature container ---- */
+
+		.folder { position: relative; max-width: 34rem; margin-top: 1.5rem; }
+
+		.folder-tab {
+			display: inline-block;
+			max-width: 100%;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			background: var(--folder-deep);
+			border: 1px solid var(--ruling);
+			border-bottom: none;
+			border-radius: 6px 6px 0 0;
+			padding: 0.5rem 1rem 0.375rem;
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--text);
+		}
+
+		.folder-body {
+			background: var(--folder);
+			border: 1px solid var(--ruling);
+			border-radius: 0 var(--radius-s) var(--radius-s) var(--radius-s);
+			font-family: var(--font-records);
+			font-size: 0.9375rem;
+			line-height: 1.7;
+			padding: 1.5rem 2rem;
+		}
+
+		.folder-body .f-head { letter-spacing: 0.08em; margin-bottom: 0.25rem; }
+		.folder-body .f-sub { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.08em; margin-bottom: 1rem; }
+		.folder-body .f-row { display: flex; gap: 1rem; }
+		.folder-body .f-row .k { color: var(--muted); min-width: 6rem; }
+		.folder-body .f-row .v { color: var(--text); overflow-wrap: anywhere; }
+		.folder-body .f-ok { color: var(--ochre-700); }
+
+		/* the stamp: one per view, proof moments only */
+		.stamp {
+			position: absolute;
+			top: -3.1rem;
+			right: 0;
+			transform: rotate(4deg);
+			color: var(--stamp);
+			border: 3px solid var(--stamp);
+			border-radius: var(--radius-s);
+			font-family: var(--font-records);
+			font-weight: 500;
+			font-size: 0.9375rem;
+			letter-spacing: 0.35em;
+			padding: 0.375rem 0.5rem 0.375rem 0.9rem;
+			background: var(--paper);
+		}
+
+		/* ---- records tables ---- */
+
+		.table-wrap { overflow-x: auto; }
+		.records {
+			border-collapse: collapse;
+			font-family: var(--font-records);
+			font-size: 0.9375rem;
+			width: 100%;
+			max-width: 46rem;
+			border: 1px solid var(--ruling);
+			background: var(--surface);
+		}
+		.records th {
+			text-align: left;
+			font-weight: 500;
+			color: var(--muted);
+			padding: 0.625rem 1rem;
+			border-bottom: 1px solid var(--ruling);
+			letter-spacing: 0.02em;
+		}
+		.records td { padding: 0.625rem 1rem; vertical-align: top; }
+		.records tr:nth-child(even) td { background: var(--bar); }
+		.records td:first-child { white-space: nowrap; }
+		.records .req { color: var(--ochre-700); }
+		.records .small-cell { font-size: 0.8125rem; color: var(--muted); }
+
+		/* ---- status pills ---- */
+
+		.status {
+			display: inline-block;
+			font-family: var(--font-records);
+			font-size: 0.6875rem;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			padding: 0.1875rem 0.625rem;
+			border-radius: var(--radius-pill);
+			border: 1px solid var(--muted);
+			color: var(--muted);
+			white-space: nowrap;
+		}
+		.status-stable { border-color: var(--ochre-700); color: var(--ochre-700); }
+		.status-must { border-color: var(--ochre-700); background: var(--ochre-700); color: var(--surface); }
+
+		/* ---- ruled lists ---- */
+
+		.rules { list-style: none; margin: 0; padding: 0; max-width: 46rem; }
+		.rules li {
+			display: flex;
+			gap: 1.25rem;
+			padding: 1rem 0;
+			border-bottom: 1px solid var(--ruling);
+			align-items: baseline;
+		}
+		.rules .r-num {
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--ochre-700);
+			min-width: 2rem;
+		}
+		.rules .r-body { max-width: var(--measure); }
+
+		.claims { list-style: none; margin: 0; padding: 0; max-width: 46rem; }
+		.claims li {
+			display: flex;
+			gap: 1.25rem;
+			padding: 1rem 0;
+			border-bottom: 1px solid var(--ruling);
+			align-items: baseline;
+			flex-wrap: wrap;
+		}
+		.claims .lvl {
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--ochre-700);
+			min-width: 10.5rem;
+		}
+		.claims .r-body { flex: 1; min-width: 16rem; max-width: var(--measure); }
+
+		/* ---- "Not yet" box: the honesty device ---- */
+
+		.not-yet {
+			border: 1px solid var(--ruling);
+			background: var(--surface);
+			border-radius: var(--radius-m);
+			padding: 1.5rem 2rem;
+			max-width: 46rem;
+		}
+		.not-yet .ny-label {
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			color: var(--muted);
+			letter-spacing: 0.08em;
+			display: block;
+			margin-bottom: 0.75rem;
+		}
+		.not-yet p { margin-bottom: 0.75rem; font-size: 1rem; }
+		.not-yet p:last-child { margin-bottom: 0; }
+
+		/* ---- ticker ---- */
+
+		.ticker {
+			border-top: 1px solid var(--ruling);
+			border-bottom: 1px solid var(--ruling);
+			color: var(--text);
+			font-family: var(--font-records);
+			font-size: 0.8125rem;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+			overflow: hidden;
+		}
+		.ticker-track { display: flex; width: max-content; animation: ticker-roll 55s linear infinite; }
+		.ticker:hover .ticker-track { animation-play-state: paused; }
+		.ticker-run { display: flex; list-style: none; margin: 0; padding: 0; }
+		.ticker-run li { white-space: nowrap; padding: 0.937rem 0; }
+		.ticker-run li::after { content: '·'; color: var(--ochre-700); margin: 0 1.75rem; }
+
+		@keyframes ticker-roll {
+			from { transform: translateX(0); }
+			to { transform: translateX(-33.3333%); }
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			.ticker-track { animation: none; }
+		}
+
+		/* The marquee runs slow, linear, overflow-hidden and non-interactive,
+		   per the house rule it inherits. */
+
+		@media (max-width: 56rem) {
+			.hero { grid-template-columns: 1fr; }
+			.folder { margin-top: 0.5rem; }
+		}
+
+		@media (max-width: 40rem) {
+			.folder-body .f-row { flex-direction: column; gap: 0; }
+			.folder-body .f-row .k { min-width: 0; }
+			.stamp { right: 0; font-size: 0.8125rem; top: -2.75rem; }
+			.site-nav a { margin-left: 0.625rem; }
+			.site-nav { font-size: 0.8125rem; }
+		}
+
+/* vitals strip — the checkable claims (paper page defines its own identical copy) */
+.vitals { list-style: none; display: flex; flex-wrap: wrap; gap: 0.375rem 1.75rem; margin: 0; padding: 0.875rem 0; border-top: 1px solid var(--ruling); border-bottom: 1px solid var(--ruling); font-family: var(--font-records); font-size: 0.8125rem; letter-spacing: 0.02em; }
+.vitals li { white-space: nowrap; }
+.vitals .k { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-right: 0.5rem; }
+.vitals a { color: var(--ochre-700); }
+
+/* anatomy figure — inline SVG sizing */
+.anatomy-fig { margin: 2.5rem 0; }
+.anatomy-fig svg { width: 100%; height: auto; display: block; }
