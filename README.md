@@ -4,6 +4,34 @@ Double-click a `.curt` file on Windows, macOS, or Linux and it opens in the
 offline Curt Viewer — a browser page that renders the conversation locally.
 No server, no network; installs only under your user account.
 
+## Install
+
+**Windows (Scoop)** — self-owned bucket:
+
+```powershell
+scoop bucket add jordannewell https://github.com/JordanNewell/bucket
+scoop install curt-openwith
+```
+
+Scoop only unpacks the package; run `install.cmd` from the package folder
+(`$(scoop prefix curt-openwith)`) to register the `.curt` handler.
+
+**macOS / Linux (Homebrew)** — self-owned tap (installs the package folder;
+the formula prints the registration step):
+
+```sh
+brew tap JordanNewell/tap https://github.com/JordanNewell/homebrew-tap
+brew install curt-openwith
+bash "$(brew --prefix curt-openwith)/libexec/mac/install.sh"   # macOS
+bash "$(brew --prefix curt-openwith)/libexec/linux/install.sh" # Linux
+```
+
+**Manual** — download the release zip from
+[GitHub Releases](https://github.com/JordanNewell/curt-openwith/releases)
+and follow the platform steps below.
+
+**winget** — a manifest for v1.0.1 is drafted but not yet submitted.
+
 ## Install / uninstall
 
 1. Extract this folder somewhere stable (the association points into it —
