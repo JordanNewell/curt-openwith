@@ -1,2 +1,4 @@
 __pycache__/
 *.pyc
+# build artifact - reproducible via build.cmd, shipped only in release zips
+CurtViewer.exe

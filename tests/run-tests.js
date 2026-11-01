@@ -51,7 +51,7 @@ function runGenerator(curtPath, outDir) {
 	void outDir;
 	const res = spawnSync(
 		"powershell.exe",
-		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", PS1, curtPath, "-NoLaunch"],
+		["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", PS1, curtPath, "-NoLaunch", "-NoDialog"],
 		{ encoding: "utf8" }
 	);
 	return { code: res.status, stderr: (res.stderr || "").trim() };
@@ -199,6 +199,45 @@ function main() {
 			check("long path: injected payload round-trips", payload.text === validJson);
 		} else {
 			check("long path: view HTML written", false);
+		}
+	}
+
+	// --- native launcher (CurtViewer.exe) ------------------------------------
+	console.log("native launcher (CurtViewer.exe)");
+	{
+		const exePath = path.join(PKG, "CurtViewer.exe");
+
+		// build.cmd must produce the exe with the in-box compiler alone.
+		const build = spawnSync("cmd.exe", ["/d", "/c", path.join(PKG, "build.cmd")], { encoding: "utf8" });
+		check("build.cmd exits 0", build.status === 0, `exit=${build.status} ${(build.stderr || "").trim()}`);
+		check("CurtViewer.exe exists after build.cmd", fs.existsSync(exePath) && fs.statSync(exePath).size > 0);
+
+		if (fs.existsSync(exePath)) {
+			// The exe forwards args verbatim; -NoLaunch keeps the browser shut
+			// and -NoDialog keeps error paths from popping a modal dialog.
+			const runExe = (curtPath) => {
+				const res = spawnSync(exePath, [curtPath, "-NoLaunch", "-NoDialog"], { encoding: "utf8" });
+				return { code: res.status, stderr: (res.stderr || "").trim() };
+			};
+
+			// Happy path — the fixture name and its directory both contain
+			// spaces, exercising the exe's argument quoting end to end.
+			const spacesCurt = path.join(fixturesDir, "smuggled close tag.curt");
+			const spacesHtml = path.join(fixturesDir, "view-smuggled close tag.html");
+			try { fs.unlinkSync(spacesHtml); } catch {}
+			const ok = runExe(spacesCurt);
+			check("exe: spaces-in-path fixture exits 0", ok.code === 0, `exit=${ok.code} ${ok.stderr}`);
+			check("exe: view-*.html written next to the .curt file", fs.existsSync(spacesHtml));
+			if (fs.existsSync(spacesHtml)) {
+				const payload = JSON.parse(extractInjected(fs.readFileSync(spacesHtml, "utf8")));
+				check("exe: forwarded payload round-trips the file exactly", payload.text === fs.readFileSync(spacesCurt, "utf8"));
+				check("exe: payload.name keeps the original file name", payload.name === "smuggled close tag.curt");
+			}
+
+			// Exit-code passthrough on the error path (suppressed dialog).
+			const bad = runExe(path.join(fixturesDir, "does-not-exist.curt"));
+			check("exe: missing file exits nonzero (exit code passthrough)", bad.code !== 0, `exit=${bad.code}`);
+			check("exe: missing file writes no view HTML", !fs.existsSync(path.join(fixturesDir, "view-does-not-exist.html")));
 		}
 	}
 

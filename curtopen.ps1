@@ -10,7 +10,11 @@ param(
 	[Parameter(Mandatory = $true, Position = 0)]
 	[string]$CurtFile,
 	# Internal: skip the browser launch (used by the package's own tests).
-	[switch]$NoLaunch
+	[switch]$NoLaunch,
+	# Internal: skip the friendly error dialog, writing the error to stderr
+	# instead (used by the package's own tests — a modal dialog would block
+	# an automated run).
+	[switch]$NoDialog
 )
 
 $ErrorActionPreference = "Stop"
@@ -88,10 +92,14 @@ try {
 	exit 0
 } catch {
 	$msg = "Curt Viewer could not open this file:`r`n`r`n$($_.Exception.Message)"
-	try {
-		Add-Type -AssemblyName System.Windows.Forms
-		[void][Windows.Forms.MessageBox]::Show($msg, "Curt Viewer")
-	} catch {
+	if (-not $NoDialog) {
+		try {
+			Add-Type -AssemblyName System.Windows.Forms
+			[void][Windows.Forms.MessageBox]::Show($msg, "Curt Viewer")
+		} catch {
+			Write-Error $msg
+		}
+	} else {
 		Write-Error $msg
 	}
 	exit 1

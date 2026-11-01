@@ -8,16 +8,25 @@ No server, no network; installs only under your user account.
 
 1. Extract this folder somewhere stable (the association points into it —
    don't delete it after installing).
-2. Double-click `install.cmd`. It prints exactly what it writes: four values
-   under `HKCU\Software\Classes` (`.curt` → `curtfile`, the class name, the
-   "Open with Curt Viewer" verb label, and the open command pointing at
-   `curtopen.cmd` in this folder). Current user only — no admin needed,
-   nothing machine-wide, no files copied anywhere.
+2. Double-click `install.cmd`. It registers `CurtViewer.exe` — the native
+   launcher, which opens `.curt` files with no console flash — building it
+   on the spot from `src-windows\CurtViewer.cs` with the C# compiler Windows
+   ships in the box if the exe isn't present yet. If neither the exe nor a
+   compiler is available it falls back to the `curtopen.cmd` wrapper (same
+   behavior; a console window flashes briefly on each open). It prints
+   exactly what it writes: four values under `HKCU\Software\Classes`
+   (`.curt` → `curtfile`, the class name, the "Open with Curt Viewer" verb
+   label, and the open command pointing at the handler in this folder).
+   Current user only — no admin needed, nothing machine-wide, no files
+   copied anywhere.
 3. Double-click any `.curt` file.
 
 `uninstall.cmd` deletes those same registry keys (your files are untouched).
 
 Already-open Explorer windows may need a refresh (F5) to pick up the change.
+
+Upgrading: extract the new package over (or next to) the old one and re-run
+`install.cmd` so the registered path picks up the new folder.
 
 ## macOS install / uninstall
 
@@ -54,8 +63,26 @@ after installing.
 
 ## How it works
 
-`curtopen.cmd` is the association target; it hands the file path to
-`curtopen.ps1`. On macOS and Linux the association target is `Curt Viewer.app`
+On Windows the association target is `CurtViewer.exe`, a ~6 KB native
+launcher built by `build.cmd` from `src-windows\CurtViewer.cs` (source
+shipped in the package — the exe is reproducible from that script alone,
+using the .NET Framework C# compiler at
+`C:\Windows\Microsoft.NET\...\v4.0.30319\csc.exe` that every Windows install
+already has; no SDK, no downloads). It resolves its own directory, requires
+`curtopen.ps1` as a sibling, forwards every argument to
+
+```
+powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File curtopen.ps1 <args>
+```
+
+with `CreateNoWindow` set (so double-clicking a `.curt` file shows no
+console flash — the ps1's friendly error dialog still surfaces when
+something is actually wrong), and passes the script's exit code straight
+through. If `curtopen.ps1` is missing it says so in a plain MessageBox.
+
+`curtopen.cmd` is the older wrapper around the same script and remains the
+fallback when no compiler is available. On macOS and Linux the association
+target is `Curt Viewer.app`
 / `curt-viewer.desktop`, which invoke the shell wrappers (`mac/curtopen.sh`,
 `linux/curtopen.sh`) around the same logic. On every platform the generator:
 
@@ -127,8 +154,13 @@ with `</script>` smuggled into a message body; an invalid-JSON file), runs
 the real `curtopen.ps1` generator over each in a temp directory
 (`-NoLaunch`, so no browser opens), and verifies the generated HTML by
 parsing out the injected JSON, round-tripping it through `parseCurt`, and
-checking the `\u003c-escape` invariant. It never touches the registry and never
-launches a browser.
+checking the `\u003c-escape` invariant. It then compiles `CurtViewer.exe` via `build.cmd` and
+exercises it end to end: the exe must exist after the build, must open a
+spaces-in-path fixture into a generated `view-*.html` (args forwarded
+through to `-NoLaunch`), and must pass the ps1's nonzero exit code back
+through on a missing file (`-NoDialog`, the ps1's other test-only switch,
+keeps the friendly error dialog from blocking automated runs). It never
+touches the registry and never launches a browser.
 
 macOS / Linux: `python3 shared/test-generator.py` does the same for the
 shared generator (`shared/curtopen-generator.py`) — the identical three
@@ -158,8 +190,12 @@ human-only; everything automatable runs in CI. The workflow fires on push.
 ## Shipping
 
 The whole folder is designed to zip as-is for a GitHub release (viewer +
-scripts + this README; no build step). A scoop manifest can point at the
-same zip and invoke `install.cmd` post-install — not built yet.
+scripts + this README; the only build step is `build.cmd`, and the shipped
+`CurtViewer.exe` is reproducible from it on any Windows box). The zip's
+`CurtViewer.exe` also makes the package winget-eligible (zip installer with
+a portable nested exe); a draft manifest for `microsoft/winget-pkgs` lives
+in `packaging/winget/` and is **not** submitted — submission is a human call
+(see the README there).
 
 ## Part of the .curt suite
 
