@@ -152,9 +152,7 @@ reference implementation). It then attempts the real Launch Services
 `open` / `xdg-open` paths (tolerated with `continue-on-error` — CI runners
 are headless), uninstalls with residue assertions, and reinstalls to prove
 idempotence. The Finder/DE eyeball lines of `QA-CHECKLIST.md` stay
-human-only; everything automatable runs in CI. The workflow fires on push
-(the repo has no remote yet — it starts running when the repo lands on
-GitHub).
+human-only; everything automatable runs in CI. The workflow fires on push.
 
 
 ## Shipping
@@ -162,5 +160,13 @@ GitHub).
 The whole folder is designed to zip as-is for a GitHub release (viewer +
 scripts + this README; no build step). A scoop manifest can point at the
 same zip and invoke `install.cmd` post-install — not built yet.
+
+## Part of the .curt suite
+
+- [`curt-format`](https://github.com/JordanNewell/dot_curt) — the .curt format spec + reference implementation ([npm](https://www.npmjs.com/package/curt-format))
+- [`curt-convert`](https://github.com/JordanNewell/curt-convert) — Claude Code transcripts → .curt ([npm](https://www.npmjs.com/package/curt-convert))
+- [`curt-vcon`](https://github.com/JordanNewell/curt-vcon) — .curt ⇄ vCon (IETF) bridge ([npm](https://www.npmjs.com/package/curt-vcon))
+- [`curt-wildchat`](https://github.com/JordanNewell/curt-wildchat) — WildChat-1M records → .curt ([npm](https://www.npmjs.com/package/curt-wildchat))
+- [`curt-openwith`](https://github.com/JordanNewell/curt-openwith) — double-click any .curt file: offline viewer, Windows + macOS + Linux
 
 MIT — see `LICENSE`.

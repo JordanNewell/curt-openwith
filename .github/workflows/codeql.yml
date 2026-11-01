@@ -1,0 +1,32 @@
+name: CodeQL
+
+# Source-level security analysis (interpreted languages, no build step).
+# security-extended queries. The interesting surface is the python generator
+# (injects file text into generated HTML) and the vendored viewer JS
+# (validate-then-render path).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '30 8 * * 1' # Mondays 08:30 UTC
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript,python
+          queries: security-extended
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:multi"
